@@ -1,0 +1,101 @@
+---
+
+  title: "Analysis "
+ 
+---
+
+```{r}
+library(babynames)
+library(knitr)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(pheatmap)
+```
+
+Plotting and cross-referencing
+To display the first 10 lines of the babynames table you can add:
+
+```{r}
+head(babynames) |> kable()
+```
+```{r}
+get_most_frequent <- function(babynames, select_sex, from = 1950) {
+  most_freq <- babynames |>
+    filter(sex == select_sex, year > from) |>
+    group_by(name) |>
+    summarise(average = mean(prop)) |>
+    arrange(desc(average))
+    
+  return(list(
+    babynames = babynames,
+    most_frequent = most_freq,
+    sex = select_sex,
+    from = from))
+}
+
+plot_top <- function(x, top = 10) {
+  topx <- x$most_frequent$name[1:top]
+  
+  p <- x$babynames |>
+    filter(name %in% topx, sex == x$sex, year > x$from) |>
+    ggplot(aes(x = year, y = prop, color = name)) +
+    geom_line() +
+    scale_color_brewer(palette = "Paired") +
+    theme_classic()
+  
+  return(p)
+}
+```
+
+```{r}
+get_most_frequent(babynames, select_sex = "F") |>
+  plot_top()
+```
+
+```{r}
+get_most_frequent(babynames, select_sex = "M") |>
+  plot_top()
+```
+
+```{r}
+```{r}
+# get most frequent girl names from 2010 onwards
+from_year <- 2010
+most_freq_girls <- get_most_frequent(babynames, select_sex = "F",
+                                     from = from_year)
+
+# plot top 5 girl names
+most_freq_girls |>
+  plot_top(top = 5)
+
+# plot top 10 girl names
+most_freq_girls |>
+  plot_top(top = 10)
+
+# get top 30 girl names in a matrix
+# with names in rows and years in columns
+prop_df <- babynames |> 
+  filter(name %in% most_freq_girls$most_frequent$name[1:30] & sex == "F") |>
+  filter(year >= from_year) |> 
+  select(year, name, prop) |>
+  pivot_wider(names_from = year,
+              values_from = prop)
+
+prop_mat <- as.matrix(prop_df[, 2:ncol(prop_df)])
+rownames(prop_mat) <- prop_df$name
+
+# create heatmap
+pheatmap(prop_mat, cluster_cols = FALSE, scale = "row")
+```
+```
+
+
+## Extra
+Quarto offers the possiblity to personnalise and extend its base capability with extensions built by the quarto community.
+
+These include extra fonts and emojis, additionnal document template (like scientific journal template), extra graphical components (like the accordion ).
+
+Extensions can be installed with the terminal command:
+
+quarto add EXTENSIONNAME
